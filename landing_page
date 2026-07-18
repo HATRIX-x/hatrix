@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HATRIX — Web & API Penetration Tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#060605; --obsidian:#0b0a08; --basalt:#131210; --basalt-2:#1a1813;
+    --gold:#cda349; --gold-bright:#f0d38a; --green:#3ef0a0; --green-dim:#1a7a52;
+    --turquoise:#33c5be; --bone:#ece5d1; --muted:#847d6e; --line:#26231b;
+    --crit:#ef5f52; --high:#f0b23e;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--void); color:var(--bone); font-family:'Inter',sans-serif; line-height:1.6; overflow-x:hidden;}
+  ::selection{background:rgba(62,240,160,0.25); color:#fff;}
+  a{color:inherit; text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  #matrix{position:fixed; inset:0; z-index:0; opacity:0.5; pointer-events:none;}
+  .vignette{position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(ellipse 80% 60% at 50% 0%, transparent 40%, rgba(6,6,5,0.72) 100%),
+               radial-gradient(ellipse 100% 80% at 50% 120%, rgba(6,6,5,0.92), transparent 60%);}
+
+  nav{position:fixed; top:0; left:0; right:0; z-index:100; display:flex; align-items:center; justify-content:space-between;
+    padding:20px 6vw; transition:all 0.4s; border-bottom:1px solid transparent;}
+  nav.scrolled{background:rgba(8,8,6,0.82); backdrop-filter:blur(14px); padding:14px 6vw; border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:center; gap:13px;}
+  .brand-mark{width:32px; height:32px;}
+  .brand-name{font-family:'Cinzel',serif; font-weight:700; font-size:1.25rem; letter-spacing:0.16em; color:var(--gold-bright);}
+  .nav-links{display:flex; align-items:center; gap:34px;}
+  .nav-links a{font-family:'JetBrains Mono',monospace; font-size:0.76rem; letter-spacing:0.06em; color:var(--muted); position:relative; transition:color 0.2s;}
+  .nav-links a::after{content:''; position:absolute; left:0; bottom:-6px; width:0; height:1px; background:var(--green); transition:width 0.3s;}
+  .nav-links a:hover{color:var(--green);}
+  .nav-links a:hover::after{width:100%;}
+  .nav-cta{font-family:'JetBrains Mono',monospace; font-size:0.76rem; letter-spacing:0.04em; padding:11px 22px;
+    border:1px solid var(--green-dim); color:var(--green); border-radius:3px; transition:all 0.3s; position:relative; overflow:hidden;}
+  .nav-cta span{position:relative; z-index:2;}
+  .nav-cta::before{content:''; position:absolute; inset:0; background:var(--green); transform:translateY(101%); transition:transform 0.3s;}
+  .nav-cta:hover{color:var(--void); border-color:var(--green);}
+  .nav-cta:hover::before{transform:translateY(0);}
+
+  .hero{position:relative; z-index:2; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:140px 6vw 90px;}
+  .terminal-line{font-family:'JetBrains Mono',monospace; font-size:0.82rem; letter-spacing:0.02em; color:var(--green); margin-bottom:30px; min-height:1.2em; opacity:0; animation:fadeUp 0.6s 0.2s forwards;}
+  .terminal-line .prompt{color:var(--crit);}
+  .cursor{display:inline-block; width:8px; height:1em; background:var(--green); margin-left:2px; vertical-align:text-bottom; animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .hero h1{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(3rem,12vw,9rem); letter-spacing:0.04em; line-height:0.95;
+    background:linear-gradient(180deg,#fbe4b0 0%,var(--gold) 55%,#a97f2e 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 50px rgba(205,163,73,0.28));}
+  .hero-tag{font-family:'JetBrains Mono',monospace; font-size:clamp(0.75rem,2vw,0.95rem); letter-spacing:0.32em; color:var(--crit); margin-top:22px; opacity:0; animation:fadeUp 0.7s 1.1s forwards;}
+  .hero-sub{max-width:640px; margin:32px auto 0; font-size:1.08rem; color:var(--bone); opacity:0; animation:fadeUp 0.7s 1.3s forwards;}
+  .hero-sub b{color:var(--gold-bright); font-weight:600;}
+  .hero-ctas{margin-top:46px; display:flex; gap:16px; flex-wrap:wrap; justify-content:center; opacity:0; animation:fadeUp 0.7s 1.5s forwards;}
+  @keyframes fadeUp{from{opacity:0; transform:translateY(22px);} to{opacity:1; transform:translateY(0);}}
+  .btn{font-family:'JetBrains Mono',monospace; font-size:0.85rem; letter-spacing:0.04em; padding:15px 32px; border-radius:3px; transition:all 0.3s; position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:10px;}
+  .btn-primary{background:var(--green); color:var(--void); font-weight:600;}
+  .btn-primary:hover{box-shadow:0 0 40px rgba(62,240,160,0.4); transform:translateY(-2px);}
+  .btn-ghost{border:1px solid var(--line); color:var(--bone);}
+  .btn-ghost:hover{border-color:var(--crit); color:var(--crit); transform:translateY(-2px);}
+  .scroll-hint{position:absolute; bottom:34px; left:50%; transform:translateX(-50%); font-family:'JetBrains Mono',monospace; font-size:0.68rem; letter-spacing:0.2em; color:var(--muted); opacity:0; animation:fadeUp 1s 2s forwards; display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .scroll-hint .bar{width:1px; height:34px; background:linear-gradient(var(--green),transparent); animation:scrollBar 2s ease-in-out infinite;}
+  @keyframes scrollBar{0%,100%{opacity:0.3; transform:scaleY(0.6);} 50%{opacity:1; transform:scaleY(1);}}
+
+  .stats{position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:rgba(19,18,16,0.7); backdrop-filter:blur(6px);}
+  .stat{padding:42px 20px; text-align:center; border-right:1px solid var(--line); position:relative;}
+  .stat:last-child{border-right:none;}
+  .stat::before{content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:2px; background:var(--green); transition:width 0.6s;}
+  .stat.in::before{width:40%;}
+  .stat-num{font-family:'JetBrains Mono',monospace; font-size:2.3rem; font-weight:700; color:var(--gold-bright);}
+  .stat-label{margin-top:8px; font-size:0.74rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);}
+
+  section{position:relative; z-index:2; padding:120px 6vw; max-width:1240px; margin:0 auto;}
+  .section-head{margin-bottom:60px;}
+  .section-head.center{text-align:center;}
+  .eyebrow{display:inline-block; font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.26em; color:var(--crit); margin-bottom:16px; padding-left:36px; position:relative;}
+  .eyebrow::before{content:''; position:absolute; left:0; top:50%; width:26px; height:1px; background:var(--crit);}
+  .center .eyebrow{padding-left:0;}
+  .center .eyebrow::before{display:none;}
+  .section-title{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(2rem,4.4vw,3rem); color:var(--gold-bright); letter-spacing:0.02em;}
+  .section-desc{max-width:640px; margin:20px 0 0; color:var(--muted); font-size:1.02rem;}
+  .center .section-desc{margin-left:auto; margin-right:auto;}
+
+  /* SERVICES */
+  .services-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line);}
+  .service-card{background:var(--obsidian); padding:46px 34px; transition:background 0.4s; position:relative; overflow:hidden;}
+  .service-card::after{content:''; position:absolute; top:0; left:0; width:100%; height:2px; background:linear-gradient(90deg,var(--crit),var(--gold)); transform:scaleX(0); transform-origin:left; transition:transform 0.4s;}
+  .service-card:hover{background:var(--basalt-2);}
+  .service-card:hover::after{transform:scaleX(1);}
+  .svc-index{font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.1em; color:var(--crit); margin-bottom:20px;}
+  .service-icon{width:38px; height:38px; margin-bottom:22px; color:var(--green); transition:transform 0.4s;}
+  .service-card:hover .service-icon{transform:translateY(-4px) rotate(-4deg);}
+  .service-card h3{font-family:'Cinzel',serif; font-size:1.2rem; color:var(--gold-bright); margin-bottom:14px;}
+  .service-card p{color:var(--muted); font-size:0.93rem;}
+
+  /* KILL LOG */
+  .killlog{display:flex; flex-direction:column; gap:18px;}
+  .kl-entry{background:linear-gradient(150deg,var(--basalt),var(--obsidian)); border:1px solid var(--line); border-radius:5px; overflow:hidden; transition:border-color 0.3s, transform 0.3s;}
+  .kl-entry:hover{border-color:var(--green-dim); transform:translateY(-3px);}
+  .kl-header{display:flex; align-items:center; gap:16px; padding:16px 24px; border-bottom:1px solid var(--line); background:rgba(0,0,0,0.25); flex-wrap:wrap;}
+  .kl-sev{font-family:'JetBrains Mono',monospace; font-size:0.7rem; font-weight:700; letter-spacing:0.08em; padding:4px 11px; border-radius:3px;}
+  .sev-crit{background:rgba(239,95,82,0.14); color:var(--crit); border:1px solid rgba(239,95,82,0.4);}
+  .sev-high{background:rgba(240,178,62,0.12); color:var(--high); border:1px solid rgba(240,178,62,0.35);}
+  .kl-target{font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--muted); letter-spacing:0.03em;}
+  .kl-target .redact{color:var(--bone); letter-spacing:0.1em;}
+  .kl-cvss{margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:0.82rem; font-weight:700; color:var(--gold-bright);}
+  .kl-body{padding:22px 24px; font-family:'JetBrains Mono',monospace; font-size:0.86rem;}
+  .kl-cmd{color:var(--green); margin-bottom:12px;}
+  .kl-cmd::before{content:'$ '; color:var(--crit);}
+  .kl-desc{color:var(--bone); font-family:'Inter',sans-serif; font-size:0.94rem; line-height:1.65; margin-bottom:16px; opacity:0.86;}
+  .kl-result{color:var(--muted); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;}
+  .kl-tag{color:var(--gold); font-size:0.72rem; letter-spacing:0.06em; border:1px solid var(--line); padding:2px 8px; border-radius:2px; flex-shrink:0;}
+  .kl-status{margin-top:14px; font-size:0.78rem; color:var(--green-dim); display:flex; align-items:center; gap:8px;}
+  .kl-dot{width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green);}
+
+  /* PROCESS timeline */
+  .timeline{position:relative; padding-left:44px;}
+  .timeline::before{content:''; position:absolute; left:13px; top:8px; bottom:8px; width:2px; background:linear-gradient(var(--crit),var(--gold),var(--green-dim));}
+  .tl-step{position:relative; padding:0 0 46px 0;}
+  .tl-step:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute; left:-44px; top:2px; width:28px; height:28px; border-radius:50%; background:var(--void); border:2px solid var(--gold); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--gold-bright); transition:all 0.3s;}
+  .tl-step:hover .tl-dot{border-color:var(--green); color:var(--green); box-shadow:0 0 16px rgba(62,240,160,0.4);}
+  .tl-step h4{font-family:'Cinzel',serif; font-size:1.18rem; color:var(--gold-bright); margin-bottom:8px;}
+  .tl-step p{color:var(--muted); font-size:0.96rem; max-width:600px;}
+
+  .trust{text-align:center; padding:76px 6vw; border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:rgba(19,18,16,0.6); position:relative; z-index:2;}
+  .trust-label{font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.24em; color:var(--muted); margin-bottom:28px;}
+  .trust-platforms{display:flex; justify-content:center; gap:48px; flex-wrap:wrap;}
+  .trust-platforms span{font-family:'JetBrains Mono',monospace; font-size:0.98rem; color:var(--bone); opacity:0.5; transition:all 0.3s;}
+  .trust-platforms span:hover{opacity:1; color:var(--green); transform:translateY(-3px);}
+
+  .contact{text-align:center; padding:140px 6vw;}
+  .contact .section-title{font-size:clamp(2.2rem,5vw,3.4rem);}
+  .contact-desc{max-width:520px; margin:22px auto 42px; color:var(--muted); font-size:1.05rem;}
+  .contact-mark{width:56px; height:56px; margin:0 auto 30px; color:var(--gold); opacity:0.9;}
+  .contact-alt{margin-top:30px; font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--muted); display:flex; gap:14px; justify-content:center; align-items:center; flex-wrap:wrap;}
+  .contact-alt a{color:var(--muted); transition:color 0.25s;}
+  .contact-alt a:hover{color:var(--green);}
+  .contact-alt .sep{opacity:0.5;}
+
+  .footer-links{display:flex; gap:22px;}
+  .footer-links a{color:var(--muted); transition:color 0.2s;}
+  .footer-links a:hover{color:var(--green);}
+  footer{padding:34px 6vw; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono',monospace; font-size:0.74rem; color:var(--muted); flex-wrap:wrap; gap:12px; position:relative; z-index:2;}
+
+  .reveal{opacity:0; transform:translateY(30px); transition:opacity 0.8s ease, transform 0.8s ease;}
+  .reveal.in{opacity:1; transform:translateY(0);}
+  .reveal.d1{transition-delay:0.1s;} .reveal.d2{transition-delay:0.2s;}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;} .reveal{opacity:1; transform:none;} #matrix{display:none;}}
+  @media (max-width:860px){
+    .nav-links{display:none;}
+    .services-grid{grid-template-columns:1fr;}
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .stat:nth-child(-n+2){border-bottom:1px solid var(--line);}
+    .stat:nth-child(2){border-right:none;}
+    .kl-cvss{margin-left:0; width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+
+<nav id="nav">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="12" r="7" stroke="#f0d38a" stroke-width="1.6"/>
+      <circle cx="20" cy="12" r="2.4" fill="#3ef0a0"/>
+      <path d="M20 19V37" stroke="#f0d38a" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M11 25H29" stroke="#f0d38a" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="11" cy="25" r="1.8" fill="#cda349"/>
+      <circle cx="29" cy="25" r="1.8" fill="#cda349"/>
+      <circle cx="20" cy="37" r="1.8" fill="#33c5be"/>
+    </svg>
+    <span class="brand-name">HATRIX</span>
+  </div>
+  <div class="nav-links">
+    <a href="#surface">Attack Surface</a><a href="#killlog">Kill Log</a><a href="#ops">Operation</a><a href="#contact">Contact</a>
+  </div>
+  <a class="nav-cta" href="https://wa.me/201080355645" target="_blank" rel="noopener"><span>Break My App →</span></a>
+</nav>
+
+<section class="hero">
+  <div class="terminal-line mono"><span class="prompt">root@hatrix</span>:~# <span id="typed"></span><span class="cursor"></span></div>
+  <h1 id="hero-title">HATRIX</h1>
+  <div class="hero-tag">I BREAK WHAT YOU BUILD</div>
+  <p class="hero-sub">Your scanners say you're clean. Your last audit said you're fine. Neither of them thinks like the person who actually wants in. <b>I do.</b> I find the way through, prove it works, and hand you the fix — before someone who isn't on your side gets there first.</p>
+  <div class="hero-ctas">
+    <a class="btn btn-primary" href="https://wa.me/201080355645" target="_blank" rel="noopener">Put Me On Your App</a>
+    <a class="btn btn-ghost" href="#killlog">See The Kill Log</a>
+  </div>
+  <div class="scroll-hint"><span>SCROLL</span><span class="bar"></span></div>
+</section>
+
+<div class="stats" id="stats">
+  <div class="stat"><div class="stat-num" data-target="9" data-suffix=".0+">0</div><div class="stat-label">Critical CVSS Kills</div></div>
+  <div class="stat"><div class="stat-num" data-target="1" data-prefix="#">0</div><div class="stat-label">Hall of Fame Rank</div></div>
+  <div class="stat"><div class="stat-num" data-target="6" data-suffix="+">0</div><div class="stat-label">Vuln Classes</div></div>
+  <div class="stat"><div class="stat-num" data-target="4">0</div><div class="stat-label">Platforms Hunted</div></div>
+</div>
+
+<section id="surface">
+  <div class="section-head reveal">
+    <span class="eyebrow">THE WAY IN</span>
+    <h2 class="section-title">Your Attack Surface</h2>
+    <p class="section-desc">Three surfaces. Every one of them has a door someone on your team forgot to lock. I find it.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card reveal">
+      <div class="svc-index mono">01 / WEB</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M3 9h18M8 9v11" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
+      <h3>Web Applications</h3>
+      <p>Your login flow. Your session logic. Your access controls. I don't run a scan and call it a day — I hunt for the assumption your developers made that turns out to be wrong.</p>
+    </div>
+    <div class="service-card reveal d1">
+      <div class="svc-index mono">02 / API</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+      <h3>APIs &amp; Microservices</h3>
+      <p>The endpoints your frontend never calls. The trust between services nobody re-checks. IDOR, SSRF, broken authorization — the gaps that live exactly where no one is looking.</p>
+    </div>
+    <div class="service-card reveal d2">
+      <div class="svc-index mono">03 / LOGIC</div>
+      <svg class="service-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.4"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3>Access Control &amp; Logic</h3>
+      <p>The flaws no tool finds, because they need someone who understands what your system is supposed to do. Privilege escalation. Tenant isolation breaks. One request that shouldn't work — but does.</p>
+    </div>
+  </div>
+</section>
+
+<section id="killlog">
+  <div class="section-head reveal">
+    <span class="eyebrow">PROOF OF WORK</span>
+    <h2 class="section-title">Kill Log</h2>
+    <p class="section-desc">Real vulnerabilities. Real production targets. Names redacted — the impact isn't.</p>
+  </div>
+  <div class="killlog">
+    <div class="kl-entry reveal">
+      <div class="kl-header">
+        <span class="kl-sev sev-crit">CRITICAL</span>
+        <span class="kl-target mono">target: <span class="redact">████████ · SaaS</span></span>
+        <span class="kl-cvss mono">CVSS 9.1</span>
+      </div>
+      <div class="kl-body">
+        <div class="kl-cmd mono">ssrf --inject host --exfil creds</div>
+        <div class="kl-desc">A zero-privilege account rewrote one field in a config endpoint and redirected the server's own outbound requests. Then the server started calling back on its own — no interaction needed — leaking signed provider credentials and reaching internal infrastructure through the redirect chain.</div>
+        <div class="kl-result mono"><span class="kl-tag">IMPACT</span> automatic credential exfiltration + internal network access</div>
+        <div class="kl-status mono"><span class="kl-dot"></span> reported · triaged · patched</div>
+      </div>
+    </div>
+    <div class="kl-entry reveal d1">
+      <div class="kl-header">
+        <span class="kl-sev sev-crit">CRITICAL</span>
+        <span class="kl-target mono">target: <span class="redact">████████ · Enterprise</span></span>
+        <span class="kl-cvss mono">CVSS 9.9</span>
+      </div>
+      <div class="kl-body">
+        <div class="kl-cmd mono">delete /authority/root --unauth</div>
+        <div class="kl-desc">One HTTP method was missing an authorization rule. Any logged-in user could delete the root permission node — and it cascaded, wiping the entire platform's authority catalog in a single request. Every role, every permission, gone.</div>
+        <div class="kl-result mono"><span class="kl-tag">IMPACT</span> full RBAC destruction, platform-wide lockout</div>
+        <div class="kl-status mono"><span class="kl-dot"></span> reported · triaged · patched</div>
+      </div>
+    </div>
+    <div class="kl-entry reveal">
+      <div class="kl-header">
+        <span class="kl-sev sev-crit">CRITICAL</span>
+        <span class="kl-target mono">target: <span class="redact">████████ · Multi-tenant</span></span>
+        <span class="kl-cvss mono">CVSS 9.6</span>
+      </div>
+      <div class="kl-body">
+        <div class="kl-cmd mono">idor --cross-tenant --files</div>
+        <div class="kl-desc">A shared file service had no ownership check on upload or download. Any authenticated user could read or write any other tenant's documents with nothing but a UUID. No property binding, no isolation — the wall between customers simply wasn't there.</div>
+        <div class="kl-result mono"><span class="kl-tag">IMPACT</span> cross-tenant read/write on private files</div>
+        <div class="kl-status mono"><span class="kl-dot"></span> reported · triaged · patched</div>
+      </div>
+    </div>
+    <div class="kl-entry reveal d1">
+      <div class="kl-header">
+        <span class="kl-sev sev-high">HIGH</span>
+        <span class="kl-target mono">target: <span class="redact">████████ · Hospitality</span></span>
+        <span class="kl-cvss mono">CVSS 8.6</span>
+      </div>
+      <div class="kl-body">
+        <div class="kl-cmd mono">bypass --perm-check /dashboard</div>
+        <div class="kl-desc">An operations dashboard checked which property you belonged to — but never checked whether you were allowed to see it. A zero-permission account pulled guest national ID numbers, contact details, and reservation financials straight out of the response.</div>
+        <div class="kl-result mono"><span class="kl-tag">IMPACT</span> guest PII &amp; financial data exposure</div>
+        <div class="kl-status mono"><span class="kl-dot"></span> reported · triaged · patched</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ops">
+  <div class="section-head reveal">
+    <span class="eyebrow">HOW I OPERATE</span>
+    <h2 class="section-title">Rules of Engagement</h2>
+    <p class="section-desc">No theatrics. No filler. Four stages, everything in writing, and you know exactly what you're paying for.</p>
+  </div>
+  <div class="timeline">
+    <div class="tl-step reveal"><div class="tl-dot mono">01</div><h4>Recon &amp; Scope</h4><p>We agree on targets and rules first, in writing. What's fair game, what's off-limits, what "done" looks like. No surprises, no collateral damage.</p></div>
+    <div class="tl-step reveal"><div class="tl-dot mono">02</div><h4>The Hunt</h4><p>Manual, patient testing — not a scanner on autopilot. I chase the logic flaws and access control gaps that automated tools are structurally blind to.</p></div>
+    <div class="tl-step reveal"><div class="tl-dot mono">03</div><h4>The Report</h4><p>Every finding with a CVSS score, a working proof of concept, and the exact fix. Written so your engineers can act on it today — not spend a week decoding it.</p></div>
+    <div class="tl-step reveal"><div class="tl-dot mono">04</div><h4>The Retest</h4><p>You patch. I come back and verify. If it's not actually closed, we're not done. A fix that doesn't hold isn't a fix.</p></div>
+  </div>
+</section>
+
+<div class="trust reveal">
+  <div class="trust-label">HUNTING ON</div>
+  <div class="trust-platforms"><span>YesWeHack</span><span>HackerOne</span><span>Intigriti</span><span>Bugcrowd</span></div>
+</div>
+
+<section id="contact" class="contact">
+  <svg class="contact-mark reveal" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="12" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="20" cy="12" r="2.4" fill="#3ef0a0"/><path d="M20 19V37M11 25H29" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+  <div class="reveal">
+    <h2 class="section-title">You Think You're Secure.</h2>
+    <p class="contact-desc">You're probably not. Let's find out on my terms — before someone finds out on theirs.</p>
+    <a class="btn btn-primary" href="https://wa.me/201080355645" target="_blank" rel="noopener" style="padding:17px 38px;">Message on WhatsApp</a>
+    <div class="contact-alt">
+      <a href="mailto:moustafa.rashid1001@gmail.com">moustafa.rashid1001@gmail.com</a>
+      <span class="sep">·</span>
+      <a href="https://www.linkedin.com/in/hatrix/" target="_blank" rel="noopener">linkedin.com/in/hatrix</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>HATRIX © 2026</span>
+  <div class="footer-links">
+    <a href="https://wa.me/201080355645" target="_blank" rel="noopener">WhatsApp</a>
+    <a href="https://www.linkedin.com/in/hatrix/" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="mailto:moustafa.rashid1001@gmail.com">Email</a>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    const c=document.getElementById('matrix'),x=c.getContext('2d');
+    const glyphs='01</>{}[]#$%&=+*ΑΒΓΔΘΛΞΠΣΦΨΩ𓂀𓁷𓆣𓃭𓅓𓊹𓋹𓇳𓏏𓆓𓎡01ABCDEF'.split('');
+    let cols,drops,fs=16;
+    function init(){c.width=innerWidth;c.height=innerHeight;cols=Math.floor(c.width/fs);drops=Array(cols).fill(0).map(()=>Math.random()*-c.height/fs);}
+    init();addEventListener('resize',init);
+    function draw(){
+      x.fillStyle='rgba(6,6,5,0.09)';x.fillRect(0,0,c.width,c.height);
+      x.font=fs+'px JetBrains Mono, monospace';
+      for(let i=0;i<cols;i++){
+        const g=glyphs[Math.floor(Math.random()*glyphs.length)];const y=drops[i]*fs;
+        x.fillStyle=Math.random()>0.94?'#f0d38a':'rgba(62,240,160,0.7)';
+        x.fillText(g,i*fs,y);
+        if(y>c.height&&Math.random()>0.975)drops[i]=0;
+        drops[i]+=0.5;
+      }
+      requestAnimationFrame(draw);
+    }
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)draw();
+  })();
+
+  (function(){
+    const el=document.getElementById('typed');
+    const text='./hunt --target $YOUR_APP --think-like-attacker';
+    let i=0;function type(){if(i<=text.length){el.textContent=text.slice(0,i);i++;setTimeout(type,50);}}
+    setTimeout(type,700);
+  })();
+
+  (function(){
+    const el=document.getElementById('hero-title');const final='HATRIX';const chars='#@%$&*ΞΨΩ01<>/';
+    let frame=0;const total=40;
+    function scramble(){
+      let out='';
+      for(let n=0;n<final.length;n++){
+        if(frame/total*final.length>n){out+=final[n];}
+        else{out+=chars[Math.floor(Math.random()*chars.length)];}
+      }
+      el.textContent=out;frame++;
+      if(frame<=total)setTimeout(scramble,55);else el.textContent=final;
+    }
+    setTimeout(scramble,350);
+  })();
+
+
+  // smooth scroll for in-page anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(link=>{
+    link.addEventListener('click', e=>{
+      const id = link.getAttribute('href');
+      const target = document.querySelector(id);
+      if(target){ e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); }
+    });
+  });
+
+  const nav=document.getElementById('nav');
+  addEventListener('scroll',()=>{nav.classList.toggle('scrolled',scrollY>40);});
+
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.15});
+  document.querySelectorAll('.reveal, .stat').forEach(el=>io.observe(el));
+
+  const statsBox=document.getElementById('stats');let counted=false;
+  const cio=new IntersectionObserver((es)=>{
+    es.forEach(e=>{
+      if(e.isIntersecting&&!counted){
+        counted=true;
+        document.querySelectorAll('.stat-num').forEach(num=>{
+          const target=+num.dataset.target;const pre=num.dataset.prefix||'',suf=num.dataset.suffix||'';let cur=0;
+          const step=()=>{cur+=Math.max(1,target/24);if(cur>=target){num.textContent=pre+target+suf;}else{num.textContent=pre+Math.floor(cur)+suf;requestAnimationFrame(step);}};
+          step();
+        });
+      }
+    });
+  },{threshold:0.5});
+  cio.observe(statsBox);
+</script>
+
+</body>
+</html>
